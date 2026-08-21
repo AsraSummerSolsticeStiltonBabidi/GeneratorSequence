@@ -1,0 +1,538 @@
+<title>Generator Chains</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+:root{
+  --paper:#FCFBFD; --surface:#FFFFFF;
+  --ink:#17151E; --ink-2:#443F4F; --muted:#6C6779;
+  --line:#E2DFE9; --line-strong:#C7C2D3;
+  --tint:15%; --tint-hi:30%;
+  --cl:0.505; --cc:0.16;
+  --chain1:#D93A3E; --chain2:#2E63E7; --onchip:#FFFFFF;
+  --shadow:0 1px 2px rgba(23,21,30,.05), 0 8px 24px -18px rgba(23,21,30,.5);
+  --caret:#6C6779; --bad:#C92C2C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111017; --surface:#18161F;
+    --ink:#F3F0F8; --ink-2:#C6C0D3; --muted:#948DA5;
+    --line:#2D2936; --line-strong:#413B50;
+    --tint:24%; --tint-hi:40%;
+    --cl:0.80; --cc:0.145;
+    --chain1:#E4575B; --chain2:#4E7DF2; --onchip:#FFFFFF;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.9);
+    --caret:#948DA5; --bad:#FF7B7B;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111017; --surface:#18161F;
+  --ink:#F3F0F8; --ink-2:#C6C0D3; --muted:#948DA5;
+  --line:#2D2936; --line-strong:#413B50;
+  --tint:24%; --tint-hi:40%;
+  --cl:0.80; --cc:0.145;
+  --chain1:#E4575B; --chain2:#4E7DF2; --onchip:#FFFFFF;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.9);
+  --caret:#948DA5; --bad:#FF7B7B;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Comic Neue","Comic Sans MS","Chalkboard SE","Segoe Print",cursive;
+  font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;
+}
+.app{max-width:744px; margin:0 auto; padding:14px 12px 36px}
+:focus-visible{outline:2px solid var(--ink); outline-offset:2px; border-radius:4px}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:30; background:var(--paper);
+  display:flex; flex-wrap:wrap; gap:10px 16px; align-items:flex-end;
+  padding:8px 2px 10px; border-bottom:1px solid var(--line); margin-bottom:14px;
+}
+.field{display:flex; flex-direction:column; gap:3px; min-width:0}
+.field>span{
+  font-size:10px; font-weight:700; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--muted); white-space:nowrap;
+}
+.grow{flex:1 1 auto}
+.seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:8px; overflow:hidden}
+.seg button{
+  appearance:none; border:0; background:var(--surface); color:var(--muted);
+  font-family:inherit; font-size:12.5px; font-weight:700; padding:5px 12px; cursor:pointer;
+}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button.on{background:var(--ink); color:var(--paper)}
+.inp, .sel select, .btn{
+  appearance:none; -webkit-appearance:none; font-family:inherit; font-weight:700;
+  border:1px solid var(--line-strong); border-radius:8px; background:var(--surface);
+  color:var(--ink); padding:4px 9px; line-height:1.3; font-size:13.5px; min-width:0;
+}
+.inp{width:4.6em; text-align:center}
+.inp.num{width:4em}
+.inp:hover, .sel select:hover, .btn:hover{border-color:var(--muted)}
+.inp.bad{border-color:var(--bad); color:var(--bad)}
+.sel{position:relative; display:inline-flex; min-width:0}
+.sel select{padding-right:26px; cursor:pointer; max-width:100%}
+.sel::after{
+  content:"▾"; position:absolute; right:9px; top:50%; transform:translateY(-55%);
+  font-size:10px; color:var(--caret); pointer-events:none;
+}
+.gen .sel select, .gen .inp{font-size:15px; box-shadow:var(--shadow)}
+.hidden{display:none !important}
+
+/* ---------- chips ---------- */
+.ladder{position:relative}
+.chips{position:relative; z-index:3; height:64px; margin-bottom:10px}
+.chip{
+  position:absolute; top:0; width:var(--cw);
+  border-radius:16px; padding:8px 11px 10px; color:var(--onchip);
+  display:flex; flex-direction:column; gap:5px; box-shadow:var(--shadow);
+}
+.chip.k1{left:0; background:var(--chain1)}
+.chip.k2{right:0; background:var(--chain2)}
+.chip b{font-size:12.5px; font-weight:700; letter-spacing:.11em}
+.chip.k2 b{align-self:flex-end}
+.chip .sel, .chip .inp{width:100%}
+.chip .sel select{width:100%}
+.chip .sel select, .chip .inp{
+  border-color:rgba(255,255,255,.45); background:rgba(255,255,255,.16); color:var(--onchip);
+  font-size:12.5px;
+}
+.chip .sel::after{color:rgba(255,255,255,.85)}
+.chip .sel select:hover, .chip .inp:hover{border-color:rgba(255,255,255,.85)}
+.chip .inp.bad{border-color:#FFD2D2; color:#FFD2D2}
+.chip select option{background:var(--surface); color:var(--ink)}
+
+/* ---------- geometry ---------- */
+.ladder{
+  --sw:15px;      /* spine thickness */
+  --s:12%;        /* spine centre inset */
+  --cw:24%;       /* chip width */
+  --c1l:19%;      /* chain-1 card: left inset */
+  --c2r:19%;      /* chain-2 card: right inset */
+  --bw:356px;     /* text block width */
+  --pad:16px;     /* card reach past the text, near side */
+  --tail:56px;    /* chain-2 extra reach on the left */
+  --nw:1fr;       /* interval-name column */
+}
+@media (max-width:700px){ .ladder{--bw:300px; --tail:48px; --pad:12px} }
+@media (max-width:560px){ .ladder{--bw:242px; --tail:46px; --s:9%; --c1l:16%; --c2r:16%; --cw:30%; --nw:0px} }
+@media (max-width:430px){ .ladder{--bw:206px; --tail:44px; --s:7%; --c1l:13%; --c2r:13%; --sw:12px} }
+
+.spine{position:absolute; top:30px; bottom:2px; width:var(--sw); border-radius:9px; z-index:0}
+.spine.s1{left:calc(var(--s) - var(--sw)/2); background:var(--chain1)}
+.spine.s2{right:calc(var(--s) - var(--sw)/2); background:var(--chain2)}
+
+.rungs{display:flex; flex-direction:column; gap:7px; position:relative}
+.rung{position:relative; height:40px; cursor:pointer}
+.link{
+  position:absolute; top:50%; height:13px; margin-top:-6.5px; z-index:1;
+  border-radius:3px;
+}
+.rung.c1 .link{left:var(--s); right:calc(100% - var(--c1l) - 12px); background:var(--chain1)}
+.rung.c2 .link{left:calc(100% - var(--c2r) - 12px); right:var(--s); background:var(--chain2)}
+
+.card{
+  --c:oklch(var(--cl) var(--cc) var(--h));
+  position:absolute; top:0; bottom:0; z-index:2;
+  background:color-mix(in srgb, var(--c) var(--tint), var(--surface));
+  border:1px solid color-mix(in srgb, var(--c) 40%, var(--line));
+  box-shadow:var(--shadow);
+}
+.rung.c1 .card{
+  left:var(--c1l); right:calc(50% - var(--bw)/2 - var(--pad));
+  border-radius:5px 20px 20px 5px;
+}
+.rung.c2 .card{
+  left:calc(50% - var(--bw)/2 - var(--tail)); right:var(--c2r);
+  border-radius:20px 5px 5px 20px;
+}
+.rung:hover .card{background:color-mix(in srgb, var(--c) var(--tint-hi), var(--surface))}
+.rung:active .card{transform:scale(.995)}
+
+.body{
+  position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%);
+  width:var(--bw); z-index:3; pointer-events:none;
+  display:grid; align-items:center; gap:0 10px;
+  grid-template-columns:32px 112px var(--nw) 48px;
+}
+.ladder.ji .body{grid-template-columns:32px 1fr 0px 48px}
+.kpos{font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap}
+.main{
+  --c:oklch(var(--cl) var(--cc) var(--h));
+  font-weight:700; color:var(--c); text-align:right; white-space:nowrap;
+}
+.main.step{font-size:19px}
+.main.f1{font-size:17px} .main.f2{font-size:15px}
+.main.f3{font-size:13px} .main.f4{font-size:11.5px}
+.iname{
+  font-size:12.5px; color:var(--ink-2); padding-left:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ladder.ji .iname{display:none}
+.cents{font-size:11px; color:var(--muted); text-align:right; white-space:nowrap}
+.body i{display:inline-block; width:.62em; text-align:center; font-style:normal}
+.body i.d{width:.3em} .body i.sl{width:.4em}
+
+/* ---------- footer ---------- */
+.foot{display:flex; flex-direction:column; align-items:center; gap:7px; margin-top:20px}
+.note{font-size:11px; color:var(--muted); text-align:center; min-height:14px; padding:0 6px}
+.btn{cursor:pointer; padding:6px 14px; box-shadow:var(--shadow)}
+.sig{margin:14px 0 0; text-align:center; font-size:13px; font-style:italic; color:var(--muted)}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="field"><span>Mode</span>
+      <span class="seg">
+        <button type="button" id="m-et" class="on">Equal</button><button type="button" id="m-ji">JI</button>
+      </span>
+    </div>
+    <div class="field f-et"><span>Divisions</span>
+      <input class="inp num" id="divs" type="number" min="2" max="311" step="1" value="31" inputmode="numeric">
+    </div>
+    <div class="field f-et"><span>Period</span>
+      <input class="inp" id="et-per" type="text" value="2" spellcheck="false">
+    </div>
+    <div class="field f-ji hidden"><span>Period</span>
+      <input class="inp" id="ji-per" type="text" value="2" spellcheck="false">
+    </div>
+    <div class="grow"></div>
+    <div class="field gen"><span>Generator</span>
+      <span class="sel f-et"><select id="et-gen"></select></span>
+      <input class="inp f-ji hidden" id="ji-gen" type="text" value="3/2" spellcheck="false">
+    </div>
+  </div>
+
+  <div class="ladder" id="ladder">
+    <i class="spine s1"></i><i class="spine s2"></i>
+    <div class="chips">
+      <div class="chip k1"><b>CHAIN 1</b>
+        <span class="sel f-et"><select id="et-s1"></select></span>
+        <input class="inp f-ji hidden" id="ji-s1" type="text" value="1/1" spellcheck="false">
+      </div>
+      <div class="chip k2"><b>CHAIN 2</b>
+        <span class="sel f-et"><select id="et-s2"></select></span>
+        <input class="inp f-ji hidden" id="ji-s2" type="text" value="5/4" spellcheck="false">
+      </div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+
+  <div class="foot">
+    <p class="note" id="note"></p>
+    <button type="button" class="btn hidden" id="dl">Download .scl</button>
+    <p class="note" id="dlnote"></p>
+  </div>
+  <p class="sig">vibe coded by ASRA3</p>
+</div>
+
+<script>
+(function(){
+  var NAMES31 = ["Unison","Diesis","Subminor second","Minor second","Neutral second",
+    "Major second","Supermajor second","Subminor third","Minor third","Neutral third",
+    "Major third","Supermajor third","Subfourth","Perfect fourth","Superfourth",
+    "Augmented fourth","Diminished fifth","Subfifth","Perfect fifth","Superfifth",
+    "Subminor sixth","Minor sixth","Neutral sixth","Major sixth","Supermajor sixth",
+    "Subminor seventh","Minor seventh","Neutral seventh","Major seventh",
+    "Supermajor seventh","Sub-octave"];
+
+  var $ = function(id){ return document.getElementById(id); };
+  var mode = "et";
+  /* et.tc = cents que el usuario quiere conservar al cambiar divisiones o periodo */
+  var et = { N:31, per:{n:2n,d:1n}, gen:18, s1:0, s2:10,
+             tc:{ gen:696.774193548, s1:0, s2:387.096774194 } };
+  var ji = { per:{n:2n,d:1n}, gen:{n:3n,d:2n}, s1:{n:1n,d:1n}, s2:{n:5n,d:4n} };
+  var TERMCAP = 10000000000n, RUNGCAP = 160;
+
+  /* ---------- fracciones exactas (BigInt) ---------- */
+  function bgcd(a,b){ while(b){ var t=a%b; a=b; b=t; } return a<0n?-a:a; }
+  function simp(r){ var g=bgcd(r.n,r.d); return {n:r.n/g, d:r.d/g}; }
+  function mul(a,b){ return simp({n:a.n*b.n, d:a.d*b.d}); }
+  function dv(a,b){ return simp({n:a.n*b.d, d:a.d*b.n}); }
+  function cmp(a,b){ var x=a.n*b.d, y=b.n*a.d; return x<y?-1:(x>y?1:0); }
+  function reduceInto(r,p){
+    var g=0;
+    while(cmp(r,p)>=0 && g++<6000) r=dv(r,p);
+    while(cmp(r,{n:1n,d:1n})<0 && g++<6000) r=mul(r,p);
+    return r;
+  }
+  function fnum(r){ return Number(r.n)/Number(r.d); }
+  function fcents(r){ return 1200*Math.log2(fnum(r)); }
+  function fstr(r){ return r.n+"/"+r.d; }
+  function parseFrac(s){
+    var m=/^\s*(\d+)\s*(?:\/\s*(\d+))?\s*$/.exec(s);
+    if(!m) return null;
+    var n=BigInt(m[1]), d=BigInt(m[2]||"1");
+    if(n<=0n||d<=0n) return null;
+    return simp({n:n,d:d});
+  }
+  function gcdN(a,b){ while(b){ var t=a%b; a=b; b=t; } return a; }
+  function dig(v){
+    var s=String(v), o="", i, c;
+    for(i=0;i<s.length;i++){
+      c=s[i];
+      o += c==="." ? '<i class="d">.</i>' : (c==="/" ? '<i class="sl">/</i>' : "<i>"+c+"</i>");
+    }
+    return o;
+  }
+
+  /* ---------- audio ---------- */
+  var AC=null, master=null, BASE=261.6256;
+  function ensureAudio(){
+    if(!AC){
+      AC = new (window.AudioContext||window.webkitAudioContext)();
+      master = AC.createGain(); master.gain.value=0.8; master.connect(AC.destination);
+    }
+    if(AC.state==="suspended") AC.resume();
+  }
+  function play(cents){
+    ensureAudio();
+    var f = BASE*Math.pow(2,cents/1200), t = AC.currentTime;
+    var o = AC.createOscillator(); o.type="sine"; o.frequency.value=f;
+    var g = AC.createGain();
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.17,t+0.015);
+    g.gain.setValueAtTime(0.17,t+0.05);
+    g.gain.exponentialRampToValueAtTime(0.0004,t+3.4);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t+3.5);
+    o.onended=function(){ try{ g.disconnect(); }catch(e){} };
+    document.documentElement.dataset.lastfreq = f.toFixed(3);
+  }
+
+  /* ---------- etiquetas ---------- */
+  function is31ed2(){ return et.N===31 && et.per.n===2n && et.per.d===1n; }
+  function nameOf(s){ return is31ed2() ? NAMES31[s] : null; }
+  function periodCents(){ return fcents(et.per); }
+  function stepCents(){ return periodCents()/et.N; }
+  function etLabel(s){
+    var nm=nameOf(s);
+    return s+" · "+(nm ? nm : (s*stepCents()).toFixed(1)+"¢");
+  }
+  function fillSelect(sel, from, val){
+    var h="", i;
+    for(i=from;i<et.N;i++) h+='<option value="'+i+'">'+etLabel(i)+"</option>";
+    sel.innerHTML=h; sel.value=val;
+  }
+  /* al cambiar divisiones/periodo, reconstruye pasos desde los cents guardados */
+  function remapFromCents(){
+    var sc=stepCents();
+    var g=Math.round(et.tc.gen/sc)%et.N; if(g<0) g+=et.N; if(g===0) g=1;
+    et.gen=g;
+    et.s1=((Math.round(et.tc.s1/sc)%et.N)+et.N)%et.N;
+    et.s2=((Math.round(et.tc.s2/sc)%et.N)+et.N)%et.N;
+  }
+  function rebuildEtSelects(){
+    fillSelect($("et-gen"),1,et.gen);
+    fillSelect($("et-s1"),0,et.s1);
+    fillSelect($("et-s2"),0,et.s2);
+  }
+
+  /* ---------- cadenas ---------- */
+  function fracClass(s){
+    return s.length<=9?"f1":(s.length<=13?"f2":(s.length<=17?"f3":"f4"));
+  }
+  function etChain(start,T){
+    var out=[],k,sc=stepCents();
+    for(k=0;k<T;k++){
+      var s=(start+k*et.gen)%et.N;
+      out.push({k:k, main:dig(s), cls:"step", name:nameOf(s), cents:s*sc, txt:String(s), sort:s});
+    }
+    return out;
+  }
+  function jiChain(start){
+    var out=[], seen={}, r=reduceInto(simp(start),ji.per);
+    while(out.length<RUNGCAP){
+      var key=fstr(r);
+      if(seen[key]) break;
+      if(r.n>TERMCAP || r.d>TERMCAP) break;
+      seen[key]=1;
+      out.push({k:out.length, main:dig(key), cls:fracClass(key), name:null,
+                cents:fcents(r), txt:key, frac:r, sort:fnum(r)});
+      r=reduceInto(mul(r,ji.gen),ji.per);
+    }
+    return out;
+  }
+  var lastA=[], lastB=[];
+  function draw(){
+    var a,b,note="";
+    $("ladder").classList.toggle("ji", mode==="ji");
+    if(mode==="et"){
+      var T=et.N/gcdN(et.N,et.gen);
+      a=etChain(et.s1,T); b=etChain(et.s2,T);
+      note = T<et.N
+        ? "generator "+et.gen+"\\"+et.N+" cycles after "+T+" steps — it reaches only "+T+" of the "+et.N
+        : et.N+" divisions of "+fstr(et.per)+" · "+stepCents().toFixed(3)+"¢ per step";
+    } else {
+      a=jiChain(ji.s1); b=jiChain(ji.s2);
+      note = "chain 1: "+a.length+" tones · chain 2: "+b.length+" — each chain stops at exact closure or once its ratios pass 10 digits";
+    }
+    lastA=a; lastB=b;
+    $("note").textContent=note;
+    var total=Math.max(a.length,b.length), h="", i, j;
+    for(i=0;i<total;i++){
+      var hue=(i*360/total).toFixed(1), pair=[["c1",a[i]],["c2",b[i]]];
+      for(j=0;j<2;j++){
+        var r=pair[j][1];
+        if(!r) continue;
+        h+='<div class="rung '+pair[j][0]+'" style="--h:'+hue+'" tabindex="0" role="button"'+
+           ' data-k="'+r.k+'" data-main="'+r.txt+'" data-cents="'+r.cents.toFixed(4)+'"'+
+           ' aria-label="play '+r.txt+'">'+
+           '<span class="link"></span><span class="card"></span>'+
+           '<span class="body">'+
+             '<span class="kpos">'+(r.k===0?"start":"+"+r.k)+"</span>"+
+             '<span class="main '+r.cls+'">'+r.main+"</span>"+
+             '<span class="iname">'+(r.name||"")+"</span>"+
+             '<span class="cents">'+dig(r.cents.toFixed(1))+"¢</span>"+
+           "</span></div>";
+      }
+    }
+    $("rungs").innerHTML=h;
+  }
+
+  /* ---------- .scl ---------- */
+  function buildScl(){
+    var lines=[], name, desc, i, seen={}, pitches=[];
+    if(mode==="et"){
+      var sc=stepCents(), pc=periodCents();
+      lastA.concat(lastB).forEach(function(r){
+        if(r.sort===0) return;
+        if(seen[r.sort]) return; seen[r.sort]=1;
+        pitches.push({v:r.sort*sc, s:(r.sort*sc).toFixed(6)});
+      });
+      pitches.sort(function(x,y){ return x.v-y.v; });
+      pitches.push({v:pc, s:pc.toFixed(6)});
+      name = et.N+"ed"+fstr(et.per).replace("/","-")+"_g"+et.gen+"_"+et.s1+"-"+et.s2;
+      desc = et.N+" equal divisions of "+fstr(et.per)+", generator "+et.gen+"\\"+et.N
+           + " ("+(et.gen*sc).toFixed(3)+"c), chains from steps "+et.s1+" and "+et.s2;
+    } else {
+      lastA.concat(lastB).forEach(function(r){
+        if(r.txt==="1/1") return;
+        if(seen[r.txt]) return; seen[r.txt]=1;
+        pitches.push({v:r.sort, s:r.txt});
+      });
+      pitches.sort(function(x,y){ return x.v-y.v; });
+      pitches.push({v:fnum(ji.per), s:fstr(ji.per)});
+      name = "ji_g"+fstr(ji.gen).replace("/","-")+"_p"+fstr(ji.per).replace("/","-")
+           + "_"+fstr(ji.s1).replace("/","-")+"_"+fstr(ji.s2).replace("/","-");
+      desc = "Just intonation, generator "+fstr(ji.gen)+" over period "+fstr(ji.per)
+           + ", chains from "+fstr(ji.s1)+" and "+fstr(ji.s2);
+    }
+    lines.push("! "+name+".scl");
+    lines.push("!");
+    lines.push(desc);
+    lines.push(" "+pitches.length);
+    lines.push("!");
+    for(i=0;i<pitches.length;i++) lines.push(" "+pitches[i].s);
+    return { filename:name+".scl", text:lines.join("\n")+"\n", count:pitches.length };
+  }
+  window.__scl = buildScl;
+
+  var dlBtn=$("dl"), dlNote=$("dlnote"), saver=null;
+  (async function(){
+    try{
+      saver = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null;
+    }catch(e){ saver=null; }
+    if(saver) dlBtn.classList.remove("hidden");
+  })();
+  dlBtn.addEventListener("click", async function(){
+    if(!saver) return;
+    var f=buildScl();
+    dlNote.textContent="";
+    try{
+      await saver.save({filename:f.filename, data:f.text});
+      dlNote.textContent="saved · "+f.count+" degrees";
+    }catch(e){
+      var code = e && e.code;
+      if(code==="rejected_extension" || code==="extension_not_enabled"){
+        try{
+          await saver.save({filename:f.filename+".txt", data:f.text});
+          dlNote.textContent="saved as "+f.filename+".txt — rename it to .scl";
+        }catch(e2){
+          dlNote.textContent = (e2 && e2.code==="declined") ? "download cancelled" : "could not save the file";
+        }
+      } else if(code==="declined"){ dlNote.textContent="download cancelled"; }
+      else if(code==="rate_limited"){ dlNote.textContent="a prompt is already open — try again in a moment"; }
+      else { dlNote.textContent="could not save the file"; }
+    }
+  });
+
+  /* ---------- interaccion ---------- */
+  var dragging=false, lastRung=null;
+  function rungAt(x,y){
+    var el=document.elementFromPoint(x,y);
+    return (el && el.closest) ? el.closest(".rung") : null;
+  }
+  $("rungs").addEventListener("pointerdown", function(e){
+    var r=e.target.closest(".rung");
+    if(!r) return;
+    play(+r.dataset.cents);
+    lastRung=r;
+    if(e.pointerType!=="touch"){ dragging=true; e.preventDefault(); }
+  });
+  window.addEventListener("pointermove", function(e){
+    if(!dragging) return;
+    var r=rungAt(e.clientX,e.clientY);
+    if(r && r!==lastRung){ lastRung=r; play(+r.dataset.cents); }
+  });
+  window.addEventListener("pointerup", function(){ dragging=false; lastRung=null; });
+  window.addEventListener("pointercancel", function(){ dragging=false; lastRung=null; });
+  $("rungs").addEventListener("keydown", function(e){
+    if(e.key!=="Enter" && e.key!==" ") return;
+    var r=e.target.closest(".rung");
+    if(r){ e.preventDefault(); play(+r.dataset.cents); }
+  });
+
+  /* ---------- controles ---------- */
+  function setMode(m){
+    mode=m;
+    $("m-et").classList.toggle("on",m==="et");
+    $("m-ji").classList.toggle("on",m==="ji");
+    var els=document.querySelectorAll(".f-et"), i;
+    for(i=0;i<els.length;i++) els[i].classList.toggle("hidden",m!=="et");
+    els=document.querySelectorAll(".f-ji");
+    for(i=0;i<els.length;i++) els[i].classList.toggle("hidden",m!=="ji");
+    dlNote.textContent="";
+    draw();
+  }
+  $("m-et").addEventListener("click",function(){ setMode("et"); });
+  $("m-ji").addEventListener("click",function(){ setMode("ji"); });
+
+  $("divs").addEventListener("change",function(){
+    var v=Math.round(+this.value);
+    if(!(v>=2&&v<=311)){ this.classList.add("bad"); return; }
+    this.classList.remove("bad");
+    et.N=v; remapFromCents(); rebuildEtSelects(); draw();
+  });
+  function fracInput(id,apply){
+    $(id).addEventListener("change",function(){
+      var f=parseFrac(this.value);
+      if(!f || !apply(f)){ this.classList.add("bad"); return; }
+      this.classList.remove("bad"); draw();
+    });
+  }
+  fracInput("et-per",function(f){
+    if(cmp(f,{n:1n,d:1n})<=0) return false;
+    et.per=f; remapFromCents(); rebuildEtSelects(); return true;
+  });
+  fracInput("ji-per",function(f){ if(cmp(f,{n:1n,d:1n})<=0) return false; ji.per=f; return true; });
+  fracInput("ji-gen",function(f){ ji.gen=f; return true; });
+  fracInput("ji-s1",function(f){ ji.s1=f; return true; });
+  fracInput("ji-s2",function(f){ ji.s2=f; return true; });
+  $("et-gen").addEventListener("change",function(){
+    et.gen=+this.value; et.tc.gen=et.gen*stepCents(); draw();
+  });
+  $("et-s1").addEventListener("change",function(){
+    et.s1=+this.value; et.tc.s1=et.s1*stepCents(); draw();
+  });
+  $("et-s2").addEventListener("change",function(){
+    et.s2=+this.value; et.tc.s2=et.s2*stepCents(); draw();
+  });
+
+  rebuildEtSelects();
+  draw();
+})();
+</script>
