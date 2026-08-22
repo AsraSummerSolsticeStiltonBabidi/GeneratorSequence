@@ -370,7 +370,7 @@ body.sustain .hint::before{content:"\25CF  "; font-size:1.05em}
    <div class="corner r">
       <div class="field f-et f-circle" id="labelfield"><span class="lab">Priority label</span>
         <span class="seg">
-          <button type="button" id="l-step" class="on">Steps</button><button type="button" id="l-cents">Cents</button><button type="button" id="l-names">Names</button>
+          <button type="button" id="l-step">Steps</button><button type="button" id="l-cents">Cents</button><button type="button" id="l-names" class="on">Names</button>
         </span>
       </div>
       <div class="field f-et"><span class="lab">View</span>
@@ -581,7 +581,7 @@ function hejiName(num, den){
   function namesAvailable(){
     return mode==="et" && et.per.n===2n && et.per.d===1n && !!upsDowns(et.N);
   }
-  var mode="et", view="circle", fmt="tun", label="step", timbre="soft";
+  var mode="et", view="circle", fmt="tun", labelPref="names", label="names", timbre="soft";
   var et = { N:31, per:{n:2n,d:1n}, gen:18, s1:0, s2:10,
              tc:{ gen:696.774193548, s1:0, s2:387.096774194 } };
   var ji = { per:{n:2n,d:1n}, gen:{n:3n,d:2n}, s1:{n:1n,d:1n}, s2:{n:5n,d:4n}, count:15 };
@@ -904,18 +904,25 @@ function hejiName(num, den){
                cents:(nw<34 ? String(Math.round(r.cents)) : r.cents.toFixed(1)+"\u00A2"),
                names:(r.note||r.txt) };
     }
-    var maxChars=1, i0, it;
+    /* con nombres arriba el segundo dato son los cents: nombre + altura real */
+    var second = (label==="cents") ? "step" : "cents";
+    var maxChars=1, maxChars2=1, i0, it;
     for(i0=0;i0<T;i0++){
-      if(a[i0]){ it=itemsOf(a[i0]); maxChars=Math.max(maxChars, String(it[label]).length); }
-      if(b[i0]){ it=itemsOf(b[i0]); maxChars=Math.max(maxChars, String(it[label]).length); }
+      if(a[i0]){ it=itemsOf(a[i0]);
+        maxChars=Math.max(maxChars, String(it[label]).length);
+        maxChars2=Math.max(maxChars2, String(it[second]).length); }
+      if(b[i0]){ it=itemsOf(b[i0]);
+        maxChars=Math.max(maxChars, String(it[label]).length);
+        maxChars2=Math.max(maxChars2, String(it[second]).length); }
     }
-    var second = (label==="step") ? "cents" : "step";
-    var byW = (nw*0.94)/(maxChars*0.56);
+    var byW  = (nw*0.94)/(maxChars*0.56);
+    var byW2 = (nw*0.94)/(maxChars2*0.55);
     /* primero se intenta con dos lineas; si no cabe, una sola mas grande */
     var fm = Math.max(7, Math.min(17, byW, nh*0.50));
-    var fc = Math.max(7, Math.min(10.5, fm*0.62));
-    var showSecond = (fm >= 8.5) && (nh >= fm*1.16 + fc*1.28);
+    var fc = Math.min(10.5, fm*0.62, byW2);
+    var showSecond = (fm >= 8.5) && (fc >= 7) && (nh >= fm*1.16 + fc*1.28);
     if(!showSecond) fm = Math.max(7, Math.min(20, byW, nh*0.80));
+    else fc = Math.max(7, fc);
     var h='<div class="wheel'+(showSecond?'':' nocents')+'" style="width:'+W+'px;height:'+W+'px;'+
           '--nw2:'+nw.toFixed(1)+'px;--nh2:'+nh.toFixed(1)+'px;--fm2:'+fm.toFixed(1)+'px;--fc2:'+fc.toFixed(1)+'px;--fk2:'+g.fk+'px">';
     h+='<i class="ring r1" style="width:'+(2*g.R1)+'px;height:'+(2*g.R1)+'px"></i>';
@@ -1003,7 +1010,10 @@ function hejiName(num, den){
       (mode!=="et" ? "Note names need Equal mode" :
        (et.per.n!==2n||et.per.d!==1n) ? "Note names need an octave period (2)" :
        et.N+" has no usable ups-and-downs spelling (its fifth is too flat)");
-    if(!canName && label==="names"){ label="step"; $("l-step").classList.add("on"); $("l-names").classList.remove("on"); }
+    label = (labelPref==="names" && !canName) ? "step" : labelPref;
+    $("l-step").classList.toggle("on", label==="step");
+    $("l-cents").classList.toggle("on", label==="cents");
+    $("l-names").classList.toggle("on", label==="names");
     /* atribucion segun el README de Notation: sistema de notacion + codigo + fuente */
     lastA=a; lastB=b;
     $("ladder").classList.toggle("wheelmode", wheel);
@@ -1216,10 +1226,7 @@ function hejiName(num, den){
   $("v-circle").addEventListener("click",function(){ setView("circle"); });
   function setLabel(v){
     if(v==="names" && !namesAvailable()) return;
-    label=v;
-    $("l-step").classList.toggle("on",v==="step");
-    $("l-cents").classList.toggle("on",v==="cents");
-    $("l-names").classList.toggle("on",v==="names");
+    labelPref=v;
     draw();
   }
   $("l-step").addEventListener("click",function(){ setLabel("step"); });
